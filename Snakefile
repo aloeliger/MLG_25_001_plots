@@ -32,7 +32,7 @@ rule correlation_plots:
 
 rule obj_mult_plots:
    input:
-      "inputs/hist_result_plotA_plotB_plotC.pkl",
+      "inputs/hists_plotA_plotB_plotC.root",
       "makeObjMultPlots.py",
    output:
       "outputs/L1Jet_mult.pdf",
@@ -48,7 +48,7 @@ rule obj_mult_plots:
 
 rule l1_dist_plots:
    input:
-      "inputs/hist_result_plotD_plotE.pkl",
+      "inputs/hists_plotD_plotE.root",
       "makeL1DistPlot.py",
    output:
       "outputs/l1_ht_efficiency.pdf",
@@ -61,7 +61,7 @@ rule l1_dist_plots:
 
 rule ht_purity_plot:
    input:
-      "inputs/hist_result_plotF.pkl",
+      "inputs/hists_plotF.root",
       "makeHTPurityPlot.py",
    output:
       "outputs/l1_ht_purity.pdf",
@@ -71,7 +71,7 @@ rule ht_purity_plot:
 
 rule dimuon_mass_plot:
    input:
-      "inputs/hist_result_plotG.pkl",
+      "inputs/hists_plotG.root",
       "makeDimuonPlot.py",
    output:
       "outputs/dimuon_mass.pdf",
