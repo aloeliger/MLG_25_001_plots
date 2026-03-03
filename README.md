@@ -23,3 +23,12 @@ python skim-inputs-mp.py --input "/eos/cms/store/group/phys_exotica/axol1tl/CICA
 ...
 ```
 The actual plotting happens in the notebook `ad-paper-plots.ipynb`
+
+## Other plots (Andrew & Elliott)
+Changed plots can be run via snakemake commands. In particular:
+
+```
+snakemake all -c<number of threads>
+```
+
+Should remake any plots for which inputs or code has changed.

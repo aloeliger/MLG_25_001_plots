@@ -1,0 +1,136 @@
+import argparse
+import uproot
+import matplotlib.pyplot as plt
+import mplhep as hep
+import numpy as np
+import os
+
+hep.style.use('CMS')
+
+DEFAULTS = {
+    "x_min": 0, "x_max": 2000,
+    "y_min": 5e0, "y_max": 5e8,
+}
+
+TRIGGER_LABELS = {
+    "DST_PFScouting_AXONominal": 'AXO Medium',
+    "DST_PFScouting_CICADAMedium": 'CICADA Medium',
+    "pure_L1_DST_PFScouting_AXONominal": 'AXO Medium Pure',
+    "pure_L1_DST_PFScouting_CICADAMedium": 'CICADA Medium Pure',
+}
+
+NORM = False
+
+
+def load_root_hists(root_file, hist_key, triggers):
+    hists = {}
+    with uproot.open(root_file) as f:
+        for trigger in triggers:
+            key = f"{trigger}_{hist_key}"
+            if key in f:
+                counts, bins = f[key].to_numpy()
+                hists[trigger] = (counts, bins)
+            else:
+                print(f"  WARNING: key '{key}' not found in ROOT file, skipping.")
+    return hists
+
+
+def draw_hist1d(counts, bins, ax=None, label="", rebin=1,
+                norm=False, linestyle='solid', color=None):
+
+    # apply rebin
+    if rebin > 1:
+        counts = counts[:len(counts) - len(counts) % rebin].reshape(-1, rebin).sum(axis=1)
+        bins = bins[::rebin]
+        if len(bins) != len(counts) + 1:
+            bins = np.append(bins[:len(counts)], bins[len(counts)])
+
+    norm_factor = np.sum(counts) * np.diff(bins) if norm else 1
+    _counts = counts / norm_factor if norm else counts
+    errs = np.sqrt(counts) / norm_factor if norm else np.sqrt(counts)
+    _errs = np.where(_counts == 0, 0, errs)
+
+    bin_centres = 0.5 * (bins[1:] + bins[:-1])
+
+    if color is not None:
+        l = ax.errorbar(x=bin_centres, y=_counts, yerr=_errs, linestyle="", color=color)
+    else:
+        l = ax.errorbar(x=bin_centres, y=_counts, yerr=_errs, linestyle="")
+    color = l[0].get_color()
+    ax.errorbar(
+        x=bins, y=np.append(_counts, _counts[-1]), drawstyle="steps-post", label=label,
+        color=color, linestyle=linestyle
+    )
+    return l
+
+
+def main(args):
+
+    x_min = args.x_min if args.x_min is not None else DEFAULTS["x_min"]
+    x_max = args.x_max if args.x_max is not None else DEFAULTS["x_max"]
+    y_min = args.y_min if args.y_min is not None else DEFAULTS["y_min"]
+    y_max = args.y_max if args.y_max is not None else DEFAULTS["y_max"]
+
+    triggers = [
+        "DST_PFScouting_AXONominal",
+        "DST_PFScouting_CICADAMedium",
+        "pure_L1_DST_PFScouting_AXONominal",
+        "pure_L1_DST_PFScouting_CICADAMedium",
+    ]
+
+    hists = load_root_hists(args.input, "l1_ht", triggers)
+
+    fig, ax = plt.subplots(figsize=(7, 7))
+
+    for trigger in triggers:
+        if trigger not in hists:
+            continue
+        counts, bins = hists[trigger]
+        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=5, norm=NORM)
+
+    ax.set_yscale("log")
+    ax.set_xlim([x_min, x_max])
+    ax.set_ylim([y_min, y_max])
+    ax.legend(loc="upper right", frameon=False, fontsize=18)
+    ax.set_ylabel(f"Events{' [A.U.]' if NORM else ''}", loc="top", fontsize=25)
+    ax.set_xlabel(r"L1 $H_T$ [GeV]", fontsize=25)
+
+    hep.cms.label(
+        "Preliminary",
+        data=True,
+        lumi=0.83,
+        year="Run 386924",
+        com=13.6,
+        fontsize=16,
+    )
+
+    out_dir = os.path.dirname(args.output)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    fig.savefig(f"{args.output}.pdf", format="pdf", bbox_inches="tight")
+    fig.savefig(f"{args.output}.png", format="png", bbox_inches="tight")
+    print(f"Saved {args.output}.pdf and {args.output}.png")
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Make a plot of L1 HT for AXO and CICADA including pure events"
+    )
+    parser.add_argument(
+        "--input",
+        default="histograms/hist.root",
+        help="Input .root histogram file"
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Full output path prefix, e.g. plots/l1_ht_purity (extensions .pdf/.png added automatically)"
+    )
+    parser.add_argument("--x-min", type=float, default=None)
+    parser.add_argument("--x-max", type=float, default=None)
+    parser.add_argument("--y-min", type=float, default=None)
+    parser.add_argument("--y-max", type=float, default=None)
+
+    args = parser.parse_args()
+    main(args)
