@@ -11,3 +11,11 @@ python3 -m pip install -r requirements.txt
 ```
 
 # Running all plots
+
+Changed plots can be run via snakemake commands. In particular:
+
+```
+snakemake all -c<number of threads>
+```
+
+Should remake any plots for which inputs or code has changed.
