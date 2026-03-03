@@ -22,9 +22,11 @@ from utils import get_fractions_above_threshold, get_rounded_str
 # ["#5790fc", "#f89c20", "#e42536", "#964a8b", "#9c9ca1", "#7a21dd"]  # 6 colors
 # ["#1845fb", "#ff5e02", "#c91f16", "#c849a9", "#adad7d", "#86c8dd", "#578dff", "#656364"]  # 8 colors
 # ["#3f90da", "#ffa90e", "#bd1f01", "#94a4a2", "#832db6", "#a96b59", "#e76300", "#b9ac70", "#717581", "#92dadd"]  # 10 colors
+# labels shall be font size 7pt 
 
 
 class Draw:
+
     def __init__(self, output_dir: Path = Path("outputs"), interactive: bool = False, output_format: str = "png"):
         self.output_dir = output_dir
         self.interactive = interactive
@@ -45,11 +47,44 @@ class Draw:
         self.label_dict = {
             "ZB": "Zero Bias",
             "ZB-masked": "Zero Bias (nPV > 10)",
-            "SingleNeutrino": "Simulated ZB",
+            "SingleNeutrino": "Simulated Zero Bias",
+            "GluGluHToTauTau": r"$ggH\rightarrow\tau\tau$",
+            "GluGluHToGG": r"$ggH\rightarrow\gamma\gamma$",
+            "VBFHto2B": r"VBF $H\rightarrow b\bar{b}$",
+            # "TT": r"$t\bar{t}$ inclusive",
+            "TT": r"$t\bar{t}$",
+            "HTo2LongLivedTo4b": r"$H\rightarrow 4 b$",
         }
         self.cms_text = "Preliminary"
         self.lumi_text = r'2024 (13.6 TeV)'
         hep.style.use("CMS")
+        # plt.rcParams.update({
+
+        #     # Fonts
+        #     "font.size": 9,
+        #     "axes.labelsize": 9,
+        #     "axes.titlesize": 9,
+        #     "legend.fontsize": 8,
+        #     "xtick.labelsize": 8,
+        #     "ytick.labelsize": 8,
+
+        #     # Lines
+        #     "lines.linewidth": 1,
+        #     "axes.linewidth": 0.8,
+
+        #     # Ticks
+        #     "xtick.major.size": 3,
+        #     "ytick.major.size": 3,
+        #     "xtick.minor.size": 1.5,
+        #     "ytick.minor.size": 1.5,
+        #     "xtick.major.width": 0.8,
+        #     "ytick.major.width": 0.8,
+        #     "xtick.minor.width": 0.6,
+        #     "ytick.minor.width": 0.6,
+
+        #     # Markers
+        #     "lines.markersize": 4,
+        # })
 
     def _parse_name(self, name: str) -> str:
         return name.replace(" ", "-").lower()
@@ -320,7 +355,8 @@ class Draw:
         xticks: list = None,
         y_max: float = 4,
         weights: dict[str, npt.NDArray] = None,
-        show_mean: bool = False
+        show_mean: bool = False,
+        figsize: Tuple[int, int] = (9.5, 9.5),
     ):
         """
         @param scores: List of numpy arrays containing the anomaly scores for each label.
@@ -329,7 +365,7 @@ class Draw:
         @param xlabel: Label for the x-axis.
         @param left_legend_col: indices of entries for the left col of the legend (single legend if None)
         """
-        plt.figure(figsize=(9.5, 9.5))
+        plt.figure(figsize=figsize)
         hs = {}
         for score, label in zip(scores, labels):
             label_ = self._get_label(label)
@@ -507,9 +543,29 @@ class Draw:
                 #     transform=plt.gca().get_xaxis_transform()  # x in data coords, y in axes coords
                 # )            
 
+            # tick_positions = [x[0] for x in working_points if x[1] != ""] + [10, 100]
+            # tick_labels = [f"{x[0]}\n{x[1]}" for x in working_points if x[1] != ""] + ['10', '100']
+            # plt.xticks(tick_positions, tick_labels)
+
             tick_positions = [x[0] for x in working_points if x[1] != ""] + [10, 100]
-            tick_labels = [f"{x[0]}\n{x[1]}" for x in working_points if x[1] != ""] + ['10', '100']
-            plt.xticks(tick_positions, tick_labels)
+            tick_labels_top = [str(x[0]) for x in working_points if x[1] != ""] + ['10', '100']
+            tick_labels_bottom = [x[1] for x in working_points if x[1] != ""]
+
+            plt.xticks(tick_positions, tick_labels_top)
+
+            ax = plt.gca()
+            for x_pos, label in zip([x[0] for x in working_points if x[1] != ""], tick_labels_bottom):
+                ax.annotate(
+                    label,
+                    xy=(x_pos, 0),
+                    xycoords=('data', 'axes fraction'),
+                    xytext=(0, -28),  # offset in points below axis
+                    textcoords='offset points',
+                    ha='center', va='top',
+                    fontsize=plt.rcParams['xtick.labelsize'],
+                    color='grey',
+                    annotation_clip=False,
+                )
 
         hep.cms.text(self.cms_text, loc=0)
         hep.add_text(self.lumi_text, loc="over right")
