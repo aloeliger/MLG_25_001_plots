@@ -202,12 +202,15 @@ def quantize(arr: np.ndarray, precision: tuple = (16, 8)) -> np.ndarray:
 
 
 def get_roc_from_scores(
-        bg_scores: np.ndarray, sig_scores: np.ndarray, weights: np.ndarray = None
+        bg_scores: np.ndarray, sig_scores: np.ndarray, bkg_weights: np.ndarray = None, sig_weights: np.ndarray = None
 ) -> tuple[np.ndarray, np.ndarray]:
     y_trues = np.concatenate([np.ones_like(sig_scores), np.zeros_like(bg_scores)])
     y_preds = np.concatenate([sig_scores, bg_scores])
-    if weights is not None:
-        weights = np.concatenate([weights, np.ones_like(bg_scores)])
+    if bkg_weights is None:
+        bkg_weights = np.ones_like(bg_scores)
+    if sig_weights is None:
+        sig_weights = np.ones_like(sig_scores)
+    weights = np.concatenate([sig_weights, bkg_weights])
     fpr, tpr, _ = roc_curve(y_trues, y_preds, sample_weight=weights)
     return fpr, tpr
 
@@ -228,8 +231,9 @@ def get_roc_dict(
     for proc in sig_labels:
         sig_score = score_dict[proc]
         if weight_dict is not None:
-            weight = weight_dict.get(proc, None)
-            d[proc] = get_roc_from_scores(bg_score, sig_score, weight)
+            bkg_weight = weight_dict.get(bg_label, None)
+            sig_weight = weight_dict.get(proc, None)
+            d[proc] = get_roc_from_scores(bg_score, sig_score, bkg_weight, sig_weight)
         else:
             d[proc] = get_roc_from_scores(bg_score, sig_score)
     return d

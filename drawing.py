@@ -13,7 +13,7 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib import gridspec
 from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
 from utils import get_fractions_above_threshold, get_rounded_str
@@ -43,7 +43,8 @@ class Draw:
         }
         self.model_color_dict = dict()
         self.label_dict = {
-            "ZB-masked": "ZB (npv > 10)",
+            "ZB": "Zero Bias",
+            "ZB-masked": "Zero Bias (nPV > 10)",
             "SingleNeutrino": "Simulated ZB",
         }
         self.cms_text = "Preliminary"
@@ -318,6 +319,7 @@ class Draw:
         bins: list = range(0, 258, 2),
         xticks: list = None,
         y_max: float = 4,
+        weights: dict[str, npt.NDArray] = None,
         show_mean: bool = False
     ):
         """
@@ -331,8 +333,10 @@ class Draw:
         hs = {}
         for score, label in zip(scores, labels):
             label_ = self._get_label(label)
+            w = weights.get(label, None) if weights is not None else None
             if show_mean:
-                label_ = f"{label_} ({get_rounded_str(np.mean(score))})",
+                # label_ = f"{label_} ({get_rounded_str(np.mean(score))})",
+                label_ = f"{label_} ({get_rounded_str(np.average(score, weights=w))})",
             _,_, hs[label] = plt.hist(
                 score.reshape((-1)),
                 bins=bins,
@@ -342,6 +346,7 @@ class Draw:
                 histtype="step",
                 linewidth=2,
                 color=self._get_process_color(label),
+                weights=w
             )
 
         plt.xlabel(xlabel)
@@ -1074,3 +1079,137 @@ class Draw:
         hep.add_text(self.lumi_text, loc="over right")
 
         self._save_fig(name)
+
+
+    def make_npv_reweighting_plot(self, npv_dict: dict, et_dict, weight_dict: dict, name: str = "npv_reweighting"):
+        npv_bins = range(80)
+        et_bins = np.linspace(0, 3000, 100)
+
+        npv_base_line = npv_dict["ZB-masked"]
+        et_base_line = et_dict["ZB-masked"]
+
+        fig, axs = plt.subplots(2, 2, figsize=(16, 16))
+        for name, npv in npv_dict.items():
+            axs[0, 0].hist(npv, bins=npv_bins, histtype="step", label=self._get_label(name), density=True, color=self._get_process_color(name))
+            w = weight_dict[name] if name in weight_dict else None
+            axs[1, 0].hist(npv, bins=npv_bins, histtype="step", label=self._get_label(name), density=True, color=self._get_process_color(name), weights=w)
+
+        for name, et in et_dict.items():
+            axs[0, 1].hist(et, bins=et_bins, histtype="step", label=self._get_label(name), density=True, color=self._get_process_color(name))
+            w = weight_dict[name] if name in weight_dict else None
+            axs[1, 1].hist(et, bins=et_bins, histtype="step", label=self._get_label(name), density=True, color=self._get_process_color(name), weights=w)
+
+        axs[0, 0].set_xlabel("Number of Primary Vertices (nPV)")
+        axs[0, 0].set_ylabel("Events (Normalized)")
+        axs[0, 0].legend()
+
+        axs[0, 1].set_xlabel("Transverse Energy (ET)")
+        axs[0, 1].set_ylabel("Events (Normalized)")
+        axs[0, 1].legend()
+
+        axs[1, 0].set_xlabel("Reweighted nPV")
+        axs[1, 0].set_ylabel("Events (Normalized)")
+        axs[1, 0].legend()
+
+        axs[1, 1].set_xlabel("Reweighted ET")
+        axs[1, 1].set_ylabel("Events (Normalized)")
+        axs[1, 1].legend()
+
+        plt.tight_layout()
+        plt.show()
+
+
+    def make_npv_reweighting_plot_with_ratio(self, npv_dict: dict, et_dict, weight_dict: dict, name: str = "npv_reweighting"):
+        npv_bins = np.array(range(80))
+        et_bins = np.linspace(0, 3000, 100)
+        npv_base_line = npv_dict["ZB-masked"]
+        et_base_line = et_dict["ZB-masked"]
+
+        def get_hist(data, bins, weights=None):
+            counts, edges = np.histogram(data, bins=bins, weights=weights)
+            total = weights.sum() if weights is not None else counts.sum()
+            counts = counts / total if total > 0 else counts
+            centers = 0.5 * (edges[:-1] + edges[1:])
+            return counts, centers
+
+        def plot_ratio(ax_ratio, base_counts, counts, centers, color):
+            with np.errstate(divide='ignore', invalid='ignore'):
+                ratio = np.where(base_counts > 0, counts / base_counts, np.nan)
+            bin_width = centers[1] - centers[0]
+            ax_ratio.step(
+                np.append(centers - bin_width / 2, centers[-1] + bin_width / 2),
+                np.append(ratio, ratio[-1]),
+                where='post', color=color
+            )
+
+        def make_panel(fig, gridspec):
+            ax_main  = fig.add_subplot(gridspec[0])
+            ax_ratio = fig.add_subplot(gridspec[1], sharex=ax_main)
+            plt.setp(ax_main.get_xticklabels(), visible=False)
+            ax_ratio.axhline(1, color='black', linestyle='--', linewidth=0.8)
+            ax_ratio.set_ylabel("SN /\nZB", fontsize=7)
+            ax_ratio.set_ylim(0, 2)
+            ax_ratio.tick_params(axis='y', labelsize=7)
+            return ax_main, ax_ratio
+
+        fig = plt.figure(figsize=(16, 18))
+
+        # Each column: 85% main, 15% ratio
+        gs_tl = fig.add_gridspec(2, 1, left=0.05, right=0.48, top=0.95, bottom=0.52, hspace=0.05, height_ratios=[5, 1])
+        gs_tr = fig.add_gridspec(2, 1, left=0.52, right=0.95, top=0.95, bottom=0.52, hspace=0.05, height_ratios=[5, 1])
+        gs_bl = fig.add_gridspec(2, 1, left=0.05, right=0.48, top=0.46, bottom=0.03, hspace=0.05, height_ratios=[5, 1])
+        gs_br = fig.add_gridspec(2, 1, left=0.52, right=0.95, top=0.46, bottom=0.03, hspace=0.05, height_ratios=[5, 1])
+
+        ax_npv,    ax_npv_ratio    = make_panel(fig, gs_tl)
+        ax_et,     ax_et_ratio     = make_panel(fig, gs_tr)
+        ax_npv_rw, ax_npv_rw_ratio = make_panel(fig, gs_bl)
+        ax_et_rw,  ax_et_rw_ratio  = make_panel(fig, gs_br)
+
+        def draw_hists(ax_main, ax_ratio, data_dict, bins, base_counts, centers, weight_dict=None):
+            for key, data in data_dict.items():
+                color = self._get_process_color(key)
+                label = self._get_label(key)
+                w = weight_dict.get(key, None) if weight_dict else None
+                counts, centers_ = get_hist(data, bins, weights=w)
+                bw = centers_[1] - centers_[0]
+                ax_main.step(
+                    np.append(centers_ - bw / 2, centers_[-1] + bw / 2),
+                    np.append(counts, counts[-1]),
+                    where='post', color=color, label=label
+                )
+                if key == "SingleNeutrino":
+                    plot_ratio(ax_ratio, base_counts, counts, centers_, color)
+
+        # Pre-compute ZB-masked baselines (unweighted and weighted)
+        npv_base,    npv_centers = get_hist(npv_base_line, npv_bins)
+        et_base,     et_centers  = get_hist(et_base_line,  et_bins)
+        npv_base_rw, _           = get_hist(npv_base_line, npv_bins, weights=weight_dict.get("ZB-masked"))
+        et_base_rw,  _           = get_hist(et_base_line,  et_bins,  weights=weight_dict.get("ZB-masked"))
+
+        draw_hists(ax_npv,    ax_npv_ratio,    npv_dict, npv_bins, npv_base,    npv_centers)
+        draw_hists(ax_et,     ax_et_ratio,     et_dict,  et_bins,  et_base,     et_centers)
+        draw_hists(ax_npv_rw, ax_npv_rw_ratio, npv_dict, npv_bins, npv_base_rw, npv_centers, weight_dict=weight_dict)
+        draw_hists(ax_et_rw,  ax_et_rw_ratio,  et_dict,  et_bins,  et_base_rw,  et_centers,  weight_dict=weight_dict)
+
+        ax_npv.set_ylabel("Events (Normalized)")
+        ax_npv.set_title("Before Reweighting")
+        ax_npv.legend(fontsize=8)
+        ax_npv_ratio.set_xlabel("Number of Primary Vertices (nPV)")
+
+        ax_et.set_ylabel("Events (Normalized)")
+        ax_et.set_title("Before Reweighting")
+        ax_et.legend(fontsize=8)
+        ax_et_ratio.set_xlabel("Transverse Energy (ET)")
+
+        ax_npv_rw.set_ylabel("Events (Normalized)")
+        ax_npv_rw.set_title("After Reweighting")
+        ax_npv_rw.legend(fontsize=8)
+        ax_npv_rw_ratio.set_xlabel("Reweighted nPV")
+
+        ax_et_rw.set_ylabel("Events (Normalized)")
+        ax_et_rw.set_title("After Reweighting")
+        ax_et_rw.legend(fontsize=8)
+        ax_et_rw_ratio.set_xlabel("Reweighted ET")
+
+        plt.savefig(f"{name}.png", dpi=150, bbox_inches='tight')
+        plt.show()
