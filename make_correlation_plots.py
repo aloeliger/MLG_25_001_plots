@@ -14,13 +14,13 @@ label_replacements = {
     "GluGluHToGG": r"$ggH\rightarrow\gamma\gamma$",
     "GluGluHToTauTau": r"$ggH\rightarrow\tau\tau$",
     "SingleNeutrino": r"Simulated Zero Bias",
-    "TT": r"$t\bar{t}$ inclusive",
+    "TT": r"$t\bar{t}$",
     "VBFHToTauTau": r"VBF H, $H\rightarrow\tau\tau$",
     "ZZ": r"ZZ",
     "ZprimeToTauTau": r"$Z'\rightarrow\tau\tau$",
     "HTo2LongLivedTo4b": r"H$\rightarrow$2 Long Lived$\rightarrow 4b$",
     "VBFHTo2B": r"VBF H, $H\rightarrow b\bar{b}$",
-    "SUEP": r"SUEP, ($H\rightarrow$Dark Photons$\rightarrow\pi\pi$)",
+    "SUEP": r"SUEP",
     "RunI": r"Zero Bias",
     'Data': r'Zero Bias',
     "data": r"Zero Bias",
@@ -79,10 +79,12 @@ def make_1D_correlation_plot(
     hist_name = f'1D_correlation_plot'
 
     plt.savefig(
-        f'{output_path}/{hist_name}.png'
+        f'{output_path}/{hist_name}.png',
+        bbox_inches='tight',
     )
     plt.savefig(
-        f'{output_path}/{hist_name}.pdf'
+        f'{output_path}/{hist_name}.pdf',
+        bbox_inches='tight',
     )
     plt.close()
     
