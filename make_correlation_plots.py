@@ -27,6 +27,13 @@ label_replacements = {
     "signal": r"signal",
 }
 
+filtered_samples = [
+    'GluGluHToTauTau',
+    'VBFHToTauTau',
+    'ZZ',
+    'ZprimeToTauTau',
+]
+
 def get_label_replacement(label):
     try:
         return label_replacements[label]
@@ -87,9 +94,15 @@ def main(args):
     with open(args.input, "rb") as theFile:
         snapshot_dict = pkl.load(theFile)
 
+    filtered_dict = {}
+    for sample in snapshot_dict:
+        if sample in filtered_samples:
+            continue
+        filtered_dict[sample] = snapshot_dict[sample]
+        
     #Pass the histogram snapshot off to the drawing function
     make_1D_correlation_plot(
-        snapshot_dict,
+        filtered_dict,
         args.output
     )
 
