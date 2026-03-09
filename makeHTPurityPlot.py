@@ -1,5 +1,6 @@
 import argparse
 import uproot
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
@@ -17,6 +18,12 @@ TRIGGER_LABELS = {
     "DST_PFScouting_CICADAMedium": 'CICADA Medium',
     "pure_L1_DST_PFScouting_AXONominal": 'AXO Medium Pure',
     "pure_L1_DST_PFScouting_CICADAMedium": 'CICADA Medium Pure',
+}
+TRIGGER_COLORS = {
+    'DST_PFScouting_CICADAMedium': '#c91f16',
+    'DST_PFScouting_AXONominal': '#86c8dd',
+    'pure_L1_DST_PFScouting_CICADAMedium': '#c91f16',
+    'pure_L1_DST_PFScouting_AXONominal': '#86c8dd'
 }
 
 NORM = False
@@ -81,17 +88,37 @@ def main(args):
     hists = load_root_hists(args.input, "l1_ht", triggers)
 
     fig, ax = plt.subplots(figsize=(7, 7))
+    fig.subplots_adjust(left=0.15, right=0.95, top=0.92, bottom=0.12)
 
     for trigger in triggers:
         if trigger not in hists:
             continue
+        color = TRIGGER_COLORS[trigger]
         counts, bins = hists[trigger]
-        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=5, norm=NORM)
+        if 'pure' in trigger: linestyle='dashed'
+        else: linestyle='solid'
+        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=5, norm=NORM, color=color, linestyle=linestyle)
 
     ax.set_yscale("log")
     ax.set_xlim([x_min, x_max])
     ax.set_ylim([y_min, y_max])
-    ax.legend(loc="upper right", frameon=False, fontsize=18)
+    legend_handles = []
+    for t in triggers:
+        if t in hists:
+            if 'pure' in t: linestyle='dashed'
+            else: linestyle='solid'
+            legend_handles.append(
+                mpatches.Rectangle(
+                    (0, 0), 1, 1,
+                    fill=False,
+                    edgecolor=TRIGGER_COLORS[t],
+                    linewidth=2,
+                    linestyle=linestyle,
+                    label=TRIGGER_LABELS[t],
+                )
+            )
+    ax.legend(handles=legend_handles, loc="upper right", frameon=False, fontsize=18)
+
     ax.set_ylabel(f"Events{' [A.U.]' if NORM else ''}", loc="top", fontsize=25)
     ax.set_xlabel(r"L1 $H_T$ [GeV]", fontsize=25)
 
@@ -101,14 +128,14 @@ def main(args):
         lumi=0.83,
         year="Run 386924",
         com=13.6,
-        fontsize=16,
+        fontsize=18,
     )
 
     out_dir = os.path.dirname(args.output)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    fig.savefig(f"{args.output}.pdf", format="pdf", bbox_inches="tight")
-    fig.savefig(f"{args.output}.png", format="png", bbox_inches="tight")
+    fig.savefig(f"{args.output}.pdf", format="pdf")
+    fig.savefig(f"{args.output}.png", format="png")
     print(f"Saved {args.output}.pdf and {args.output}.png")
 
 

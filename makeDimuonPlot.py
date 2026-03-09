@@ -1,5 +1,6 @@
 import argparse
 import uproot
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
@@ -16,6 +17,12 @@ TRIGGER_LABELS = {
     'DST_PFScouting_ZeroBias': 'Zero Bias',
     'DST_PFScouting_AXONominal': 'AXOL1TL V4 Medium',
     'DST_PFScouting_AXOVTight': 'AXOL1TL V4 Very Tight',
+}
+
+TRIGGER_COLORS = {
+    'DST_PFScouting_ZeroBias' : '#1845fb',
+    'DST_PFScouting_AXONominal': '#86c8dd',
+    'DST_PFScouting_AXOVTight': '#c849a9'
 }
 
 NORM = False
@@ -77,22 +84,33 @@ def main(args):
 
     hists = load_root_hists(args.input, "ScoutingMuonVtx_ScoutingMuonVtx_mass", triggers)
 
-    fig, ax = plt.subplots(figsize=(14, 8))
+    fig, ax = plt.subplots(figsize=(14, 6))
 
     for trigger in triggers:
         if trigger not in hists:
             continue
+        color = TRIGGER_COLORS[trigger]
         counts, bins = hists[trigger]
-        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=3, norm=NORM)
+        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=3, norm=NORM, color=color)
 
     ax.set_yscale("log")
     ax.set_xscale("log")
     ax.set_xlim([x_min, x_max])
     ax.set_ylim([y_min, y_max])
-    ax.legend(loc="upper right", frameon=False, fontsize=16)
+    legend_handles = [
+        mpatches.Rectangle(
+            (0, 0), 1, 1,
+            fill=False,
+            edgecolor=TRIGGER_COLORS[t],
+            linewidth=2,
+            label=TRIGGER_LABELS[t],
+        )
+        for t in triggers if t in hists
+    ]
+    ax.legend(handles=legend_handles, loc="upper right", frameon=False, fontsize=16)
     ax.set_ylabel(f"Events{' [A.U.]' if NORM else ''}", loc="top", fontsize=25)
     ax.set_xlabel(r"HLT Scouting $m_{\mu\mu}$ [GeV]", fontsize=25)
-    ax.text(60, 4e4, r"$p_T^\mu>3$ GeV, $|\eta|<2.4$", fontsize=16)
+    ax.text(60, 1e4, r"$p_T^\mu>3$ GeV, $|\eta|<2.4$", fontsize=16)
 
     hep.cms.label(
         "Preliminary",

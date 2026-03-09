@@ -1,5 +1,6 @@
 import argparse
 import uproot
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import mplhep as hep
 import numpy as np
@@ -28,6 +29,12 @@ TRIGGER_LABELS = {
     'DST_PFScouting_ZeroBias': 'Zero Bias',
     'DST_PFScouting_ZeroBias_DST_PFScouting_AXONominal': 'Zero Bias & AXO Medium',
     'DST_PFScouting_ZeroBias_DST_PFScouting_CICADAMedium': 'Zero Bias & CICADA Medium',
+}
+
+TRIGGER_COLORS = {
+    'DST_PFScouting_ZeroBias' : '#1845fb',
+    'DST_PFScouting_ZeroBias_DST_PFScouting_CICADAMedium': '#c91f16',
+    'DST_PFScouting_ZeroBias_DST_PFScouting_AXONominal': '#86c8dd'
 }
 
 NORM = False
@@ -92,17 +99,29 @@ def main(args):
     hists = load_root_hists(args.input, defaults["hist_key"], triggers)
 
     fig, ax = plt.subplots(figsize=(7, 7))
+    fig.subplots_adjust(left=0.15, right=0.95, top=0.92, bottom=0.12)
 
     for trigger in triggers:
         if trigger not in hists:
             continue
+        color = TRIGGER_COLORS[trigger]
         counts, bins = hists[trigger]
-        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=defaults["rebin"], norm=NORM)
+        draw_hist1d(counts, bins, ax=ax, label=TRIGGER_LABELS[trigger], rebin=defaults["rebin"], norm=NORM, color=color)
 
     ax.set_yscale("log")
     ax.set_xlim([x_min, x_max])
     ax.set_ylim([y_min, y_max])
-    ax.legend(loc="upper right", frameon=False, fontsize=18)
+    legend_handles = [
+        mpatches.Rectangle(
+            (0, 0), 1, 1,
+            fill=False,
+            edgecolor=TRIGGER_COLORS[t],
+            linewidth=2,
+            label=TRIGGER_LABELS[t],
+        )
+        for t in triggers if t in hists
+    ]
+    ax.legend(handles=legend_handles, loc="upper right", frameon=False, fontsize=18)
     ax.set_ylabel(f"Events{' [A.U.]' if NORM else ''}", loc="top", fontsize=25)
     ax.set_xlabel(defaults["x_label"], fontsize=25)
 
@@ -112,14 +131,14 @@ def main(args):
         lumi=11.45,
         year="2024",
         com=13.6,
-        fontsize=16,
+        fontsize=18,
     )
 
     out_dir = os.path.dirname(args.output)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    fig.savefig(f"{args.output}.pdf", format="pdf", bbox_inches="tight")
-    fig.savefig(f"{args.output}.png", format="png", bbox_inches="tight")
+    fig.savefig(f"{args.output}.pdf", format="pdf")
+    fig.savefig(f"{args.output}.png", format="png")
     print(f"Saved {args.output}.pdf and {args.output}.png")
 
 
