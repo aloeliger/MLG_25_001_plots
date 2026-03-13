@@ -3,6 +3,7 @@ import uproot
 import numpy as np
 import boost_histogram as bh
 import matplotlib.pyplot as plt
+import matplotlib
 import matplotlib.patches as mpatches
 import mplhep as hep
 import os
@@ -132,6 +133,11 @@ def draw_ratio(counts_num, bins_num, counts_denom, bins_denom, ax=None, color=No
     )
     return l
 
+def getMaxAndMinOOM(axis):
+    ymin, ymax = axis.get_ylim()
+    upperOOM = np.floor(np.log10(ymax))
+    lowerOOM = np.ceil(np.log10(ymin))
+    return (lowerOOM, upperOOM)
 
 def make_plot(hists, triggers, x_label,
               x_min, x_max, y_min, y_max, output,
@@ -177,6 +183,14 @@ def make_plot(hists, triggers, x_label,
     ax[0].set_ylabel(f"Events{' [A.U.]' if norm else ''}", loc="top", fontsize=22)
     ax[1].set_ylabel("Ratio to Zero Bias", loc="top", fontsize=24)
     ax[1].set_xlabel(x_label, loc="right", fontsize=24)
+    # maxAndMinOOM = getMaxAndMinOOM(ax[1])
+    # OOMsToUse = list(np.unique(np.round(np.linspace(start=maxAndMinOOM[0], stop=maxAndMinOOM[1], num=5))))
+    # yticks = [10**x for x in OOMsToUse]
+    # ax[1].set_yticks(yticks)
+
+    ax[1].yaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10, subs=[1.0], numticks=5))
+    ax[1].yaxis.set_minor_locator(matplotlib.ticker.LogLocator(base=10, subs=np.arange(2, 10), numticks=50))
+    
     legend_handles = [
         mpatches.Rectangle(
             (0, 0), 1, 1,
