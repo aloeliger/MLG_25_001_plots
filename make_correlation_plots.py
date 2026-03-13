@@ -70,11 +70,12 @@ def make_1D_correlation_plot(
         linestyle='--',
     )
 
-    plt.yticks(y_points, y_labels, fontsize=16)
+    plt.yticks(y_points, y_labels, fontsize=18)
     plt.xlabel('Correlation Coeff.')
     plt.ylabel('Signals')
 
     #plt.subplots_adjust(bottom=0.35)
+    plt.subplots_adjust(left=0.35)
 
     hist_name = f'1D_correlation_plot'
 
@@ -101,6 +102,7 @@ def main(args):
         if sample in filtered_samples:
             continue
         filtered_dict[sample] = snapshot_dict[sample]
+        console.log(f'{sample}: {snapshot_dict[sample]}')
         
     #Pass the histogram snapshot off to the drawing function
     make_1D_correlation_plot(
