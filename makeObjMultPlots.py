@@ -3,6 +3,7 @@ import uproot
 import numpy as np
 import boost_histogram as bh
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import mplhep as hep
 import os
 
@@ -13,6 +14,7 @@ triggers = [
     "DST_PFScouting_JetHT",
     "DST_PFScouting_CICADAMedium",
     "DST_PFScouting_DoubleMuon",
+    "DST_PFScouting_DoubleEG",
     "DST_PFScouting_AXONominal",
 ]
 
@@ -21,28 +23,38 @@ TRIGGER_LABELS = {
     'DST_PFScouting_JetHT': 'Jet HT',
     'DST_PFScouting_CICADAMedium': 'CICADA Medium',
     'DST_PFScouting_DoubleMuon': 'Double Muon',
+    'DST_PFScouting_DoubleEG': 'Double EG',
     'DST_PFScouting_AXONominal': 'AXO Medium'
+}
+
+TRIGGER_COLORS = {
+    'DST_PFScouting_ZeroBias' : '#1845fb',
+    'DST_PFScouting_JetHT': '#ff5e02',
+    'DST_PFScouting_CICADAMedium': '#c91f16',
+    'DST_PFScouting_DoubleMuon': '#578dff',
+    'DST_PFScouting_DoubleEG': '#adad7d',
+    'DST_PFScouting_AXONominal': '#86c8dd'
 }
 
 # Default axis limits and x-labels per object type
 OBJ_DEFAULTS = {
     "L1Mu": {
         "hist_key": "L1Mu_mult",
-        "x_label": r"$N_{\text{L1Mu}}$",
+        "x_label": r"L1 Muon Multiplicity",
         "x_min": -0.5, "x_max": 8.5,
-        "y_min": 5e-10, "y_max": 5e2,
+        "y_min": 5e-10, "y_max": 5e6,
     },
     "L1EG": {
         "hist_key": "L1EG_mult",
-        "x_label": r"$N_{\text{L1EG}}$",
+        "x_label": r"L1 EG Multiplicity",
         "x_min": -0.5, "x_max": 12.5,
-        "y_min": 5e-5, "y_max": 5e0,
+        "y_min": 5e-5, "y_max": 5e1,
     },
     "L1Jet": {
         "hist_key": "L1Jet_mult",
-        "x_label": r"$N_{\text{L1Jet}}$",
+        "x_label": "L1 Jet multiplicity",
         "x_min": -0.5, "x_max": 12.5,
-        "y_min": 5e-8, "y_max": 5e1,
+        "y_min": 5e-8, "y_max": 5e4,
     },
 }
 
@@ -126,6 +138,7 @@ def make_plot(hists, triggers, x_label,
               log_scale=True, norm=False, leg_loc='upper right'):
 
     fig, ax = plt.subplots(2, figsize=(8, 8), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+    fig.subplots_adjust(left=0.15, right=0.95, top=0.92, bottom=0.12)
     ax[1].plot(np.linspace(x_min, x_max, 10), np.ones(10), '--', color='darkgray')
 
     counts_denom, bins_denom = hists["DST_PFScouting_ZeroBias"]
@@ -134,7 +147,7 @@ def make_plot(hists, triggers, x_label,
         if trigger not in hists:
             continue
         counts, bins = hists[trigger]
-        color = 'k' if trigger == "DST_PFScouting_ZeroBias" else None
+        color = TRIGGER_COLORS[trigger]
         trigger_label = TRIGGER_LABELS[trigger]
 
         l = draw_hist1d(
@@ -161,10 +174,20 @@ def make_plot(hists, triggers, x_label,
     if log_scale:
         ax[0].set_yscale("log")
         ax[1].set_yscale("log")
-    ax[0].set_ylabel(f"Events{' [A.U.]' if norm else ''}", loc="top", fontsize=20)
-    ax[1].set_ylabel("Ratio to Zero Bias", loc="top", fontsize=20)
-    ax[1].set_xlabel(x_label, loc="right", fontsize=20)
-    ax[0].legend(loc=leg_loc, frameon=False, fontsize=16, ncols=3, columnspacing=0.7)
+    ax[0].set_ylabel(f"Events{' [A.U.]' if norm else ''}", loc="top", fontsize=22)
+    ax[1].set_ylabel("Ratio to Zero Bias", loc="top", fontsize=24)
+    ax[1].set_xlabel(x_label, loc="right", fontsize=24)
+    legend_handles = [
+        mpatches.Rectangle(
+            (0, 0), 1, 1,
+            fill=False,
+            edgecolor=TRIGGER_COLORS[t],
+            linewidth=2,
+            label=TRIGGER_LABELS[t],
+        )
+        for t in triggers if t in hists
+    ]
+    ax[0].legend(handles=legend_handles, loc=leg_loc, frameon=False, fontsize=22, ncols=2, columnspacing=0.7)
 
     hep.cms.label(
         "Preliminary",
@@ -172,7 +195,7 @@ def make_plot(hists, triggers, x_label,
         lumi=11.45,
         year="2024",
         com=13.6,
-        fontsize=20,
+        fontsize=22,
         ax=ax[0],
     )
 
@@ -182,8 +205,8 @@ def make_plot(hists, triggers, x_label,
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
 
-    fig.savefig(f"{output}.pdf", format="pdf", bbox_inches="tight")
-    fig.savefig(f"{output}.png", format="png", bbox_inches="tight")
+    fig.savefig(f"{output}.pdf", format="pdf")
+    fig.savefig(f"{output}.png", format="png")
     print(f"Saved {output}.pdf and {output}.png")
 
 
