@@ -77,7 +77,7 @@ def main(args):
         score_name="CICADA_2024",
         x_axis_bounds=(0., 180.0),
         x_axis_label="Emulated CICADA Score",
-        working_point_label = "CICADA Medium",
+        working_point_label = "CICADA",
         pure_label = "CICADA Unique",
     )
 
@@ -87,7 +87,7 @@ def main(args):
         score_name = "AXOL1TL_v4",
         x_axis_bounds=(0., 2000.0),
         x_axis_label="Emulated AXOL1TL Score",
-        working_point_label = "AXOL1TL Medium",
+        working_point_label = "AXOL1TL",
         pure_label = "AXOL1TL Unique",
     )
     
