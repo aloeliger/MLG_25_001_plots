@@ -3,7 +3,7 @@ import uproot
 import numpy as np
 import boost_histogram as bh
 import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib.ticker
 import matplotlib.patches as mpatches
 import mplhep as hep
 import os
@@ -21,11 +21,11 @@ triggers = [
 
 TRIGGER_LABELS = {
     'DST_PFScouting_ZeroBias' : 'Zero Bias',
-    'DST_PFScouting_JetHT': 'Jet HT',
-    'DST_PFScouting_CICADAMedium': 'CICADA Medium',
+    'DST_PFScouting_JetHT': 'Jet $H_T$',
+    'DST_PFScouting_CICADAMedium': 'CICADA',
     'DST_PFScouting_DoubleMuon': 'Double Muon',
-    'DST_PFScouting_DoubleEG': 'Double EG',
-    'DST_PFScouting_AXONominal': 'AXO Medium'
+    'DST_PFScouting_DoubleEG': 'Double $e\gamma$',
+    'DST_PFScouting_AXONominal': 'AXOL1TL'
 }
 
 TRIGGER_COLORS = {
@@ -56,6 +56,18 @@ OBJ_DEFAULTS = {
         "x_label": "L1 Jet multiplicity",
         "x_min": -0.5, "x_max": 12.5,
         "y_min": 5e-8, "y_max": 5e4,
+    },
+    "L1HT": {
+        "hist_key": "l1_ht",
+        "x_label": r"L1 $H_T$ [GeV]",
+        "x_min": 0, "x_max": 1000,
+        "y_min": 5e-10, "y_max": 5e2,
+    },
+    "L1MET": {
+        "hist_key": "l1_met",
+        "x_label": r"L1 $p_T^{\text{miss}}$ [GeV]",
+        "x_min": 0, "x_max": 180,
+        "y_min": 5e-10, "y_max": 5e2,
     },
 }
 
@@ -149,6 +161,27 @@ def make_plot(hists, triggers, x_label,
 
     counts_denom, bins_denom = hists["DST_PFScouting_ZeroBias"]
 
+    # Compute all ratio values to determine y range for ratio panel
+    all_ratios = []
+    for trigger in triggers:
+        if trigger == "DST_PFScouting_ZeroBias" or trigger not in hists:
+            continue
+        counts, bins = hists[trigger]
+        denom = np.where(counts_denom == 0, np.nan, counts_denom)
+        ratio = counts / denom
+        finite = ratio[np.isfinite(ratio) & (ratio > 0)]
+        if len(finite):
+            all_ratios.extend(finite)
+
+    if all_ratios:
+        ratio_min = min(all_ratios)
+        ratio_max = max(all_ratios)
+        # Round to nearest power of 10 with padding
+        ratio_ymin = 10 ** (np.floor(np.log10(ratio_min)) - 1)
+        ratio_ymax = 10 ** (np.ceil(np.log10(ratio_max)) + 1)
+    else:
+        ratio_ymin, ratio_ymax = 1e-2, 1e3
+
     for trigger in triggers:
         if trigger not in hists:
             continue
@@ -176,6 +209,7 @@ def make_plot(hists, triggers, x_label,
 
     ax[0].set_xlim([x_min, x_max])
     ax[0].set_ylim([y_min, y_max])
+    ax[1].set_ylim([ratio_ymin, ratio_ymax])
 
     if log_scale:
         ax[0].set_yscale("log")
@@ -183,14 +217,15 @@ def make_plot(hists, triggers, x_label,
     ax[0].set_ylabel(f"Events{' [A.U.]' if norm else ''}", loc="top", fontsize=22)
     ax[1].set_ylabel("Ratio to Zero Bias", loc="top", fontsize=24)
     ax[1].set_xlabel(x_label, loc="right", fontsize=24)
-    # maxAndMinOOM = getMaxAndMinOOM(ax[1])
-    # OOMsToUse = list(np.unique(np.round(np.linspace(start=maxAndMinOOM[0], stop=maxAndMinOOM[1], num=5))))
-    # yticks = [10**x for x in OOMsToUse]
-    # ax[1].set_yticks(yticks)
-
-    ax[1].yaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10, subs=[1.0], numticks=5))
-    ax[1].yaxis.set_minor_locator(matplotlib.ticker.LogLocator(base=10, subs=np.arange(2, 10), numticks=50))
-    
+    ax[1].yaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10, subs=[1.0], numticks=10))
+    ax[1].yaxis.set_minor_locator(matplotlib.ticker.LogLocator(base=10, subs=np.arange(2, 10), numticks=100))
+    exp_min = int(np.floor(np.log10(ratio_ymin)))
+    exp_max = int(np.ceil(np.log10(ratio_ymax)))
+    labeled_exps = set(range(exp_min, exp_max + 1, 2))
+    ax[1].yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(
+        lambda x, pos: f'$10^{{{int(round(np.log10(x)))}}}$' if int(round(np.log10(x))) in labeled_exps else ''
+    ))
+    ax[1].yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     legend_handles = [
         mpatches.Rectangle(
             (0, 0), 1, 1,
@@ -206,7 +241,7 @@ def make_plot(hists, triggers, x_label,
     hep.cms.label(
         "Preliminary",
         data=True,
-        lumi=11.45,
+        lumi=None,
         year="2024",
         com=13.6,
         fontsize=22,
@@ -254,7 +289,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--object",
         required=True,
-        choices=["L1Mu", "L1EG", "L1Jet"],
+        choices=["L1Mu", "L1EG", "L1Jet", "L1HT", "L1MET"],
         help="Which object type to plot"
     )
     parser.add_argument(
