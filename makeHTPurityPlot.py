@@ -10,14 +10,14 @@ hep.style.use('CMS')
 
 DEFAULTS = {
     "x_min": 0, "x_max": 2000,
-    "y_min": 5e0, "y_max": 5e8,
+    "y_min": 5e0, "y_max": 5e10,
 }
 
 TRIGGER_LABELS = {
-    "DST_PFScouting_AXONominal": 'AXO Medium',
-    "DST_PFScouting_CICADAMedium": 'CICADA Medium',
-    "pure_L1_DST_PFScouting_AXONominal": 'AXO Medium Pure',
-    "pure_L1_DST_PFScouting_CICADAMedium": 'CICADA Medium Pure',
+    "DST_PFScouting_AXONominal": 'AXOL1TL',
+    "DST_PFScouting_CICADAMedium": 'CICADA',
+    "pure_L1_DST_PFScouting_AXONominal": 'AXOL1TL Unique',
+    "pure_L1_DST_PFScouting_CICADAMedium": 'CICADA Unique',
 }
 TRIGGER_COLORS = {
     'DST_PFScouting_CICADAMedium': '#c91f16',
@@ -125,8 +125,8 @@ def main(args):
     hep.cms.label(
         "Preliminary",
         data=True,
-        lumi=0.83,
-        year="Run 386924",
+        lumi=None,
+        year="2024",
         com=13.6,
         fontsize=18,
     )
