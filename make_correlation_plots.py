@@ -18,7 +18,7 @@ label_replacements = {
     "VBFHToTauTau": r"VBF H, $H\rightarrow\tau\tau$",
     "ZZ": r"ZZ",
     "ZprimeToTauTau": r"$Z'\rightarrow\tau\tau$",
-    "HTo2LongLivedTo4b": r"H$\rightarrow$2 Long Lived$\rightarrow 4b$",
+    "HTo2LongLivedTo4b": r"BSM H$\rightarrow 4b$",
     "VBFHTo2B": r"VBF H, $H\rightarrow b\bar{b}$",
     "SUEP": r"SUEP",
     "RunI": r"Zero Bias",
@@ -51,30 +51,31 @@ def make_1D_correlation_plot(
     hep.cms.text(f"Preliminary", loc=0)
     
     samples = list(snapshot_dict.keys())
-    x_labels = map(get_label_replacement, samples)
+    y_labels = map(get_label_replacement, samples)
     correlations = list(snapshot_dict.values())
-    x_points = np.arange(len(samples))
+    y_points = np.arange(len(samples))
 
     plt.plot(
-        x_points,
         correlations,
+        y_points,
         linestyle='None',
         marker='o',
         color='#5790FC',
         markersize=10,
     )
 
-    vertical_line = plt.axvline(
-        x=2.0 - 0.5,
+    horiztonal_line = plt.axhline(
+        y=2.0 - 0.5,
         color='grey',
         linestyle='--',
     )
 
-    plt.xticks(x_points, x_labels, rotation=90, fontsize=14)
-    plt.ylabel('Correlation Coeff.')
-    plt.xlabel('Signals')
+    plt.yticks(y_points, y_labels, fontsize=18)
+    plt.xlabel('Correlation Coeff.')
+    plt.ylabel('Signals')
 
-    plt.subplots_adjust(bottom=0.35)
+    #plt.subplots_adjust(bottom=0.35)
+    plt.subplots_adjust(left=0.35)
 
     hist_name = f'1D_correlation_plot'
 
@@ -101,6 +102,7 @@ def main(args):
         if sample in filtered_samples:
             continue
         filtered_dict[sample] = snapshot_dict[sample]
+        console.log(f'{sample}: {snapshot_dict[sample]}')
         
     #Pass the histogram snapshot off to the drawing function
     make_1D_correlation_plot(

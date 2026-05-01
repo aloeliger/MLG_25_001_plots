@@ -145,6 +145,11 @@ def draw_ratio(counts_num, bins_num, counts_denom, bins_denom, ax=None, color=No
     )
     return l
 
+def getMaxAndMinOOM(axis):
+    ymin, ymax = axis.get_ylim()
+    upperOOM = np.floor(np.log10(ymax))
+    lowerOOM = np.ceil(np.log10(ymin))
+    return (lowerOOM, upperOOM)
 
 def make_plot(hists, triggers, x_label,
               x_min, x_max, y_min, y_max, output,
