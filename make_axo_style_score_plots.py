@@ -20,7 +20,7 @@ def draw_axo_style_score_plot(
         pure_label = "CICADA Unique",
 ):
     hep.style.use("CMS")
-    hep.cms.text("Preliminary", loc=2)
+    hep.cms.label("Preliminary", data=True, loc=2, year="2024", com=13.6)
 
     overall_hist = hist_dict["overall"]
     working_point_hist = hist_dict['working']
